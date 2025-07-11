@@ -1,0 +1,71 @@
+let currentUser = null;
+let householdId = "";
+
+function login() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).then(res => {
+    currentUser = res.user;
+    document.getElementById('main').style.display = 'block';
+  });
+}
+
+function setHousehold() {
+  householdId = document.getElementById('householdId').value.trim();
+  if (!householdId) return alert("共有コードを入力してください");
+  document.getElementById('form').style.display = 'block';
+  document.getElementById('date').valueAsDate = new Date();
+  document.getElementById('monthSelector').value = new Date().toISOString().slice(0, 7);
+  document.getElementById('monthSelector').addEventListener('change', render);
+  render();
+}
+
+function addExpense() {
+  const date = document.getElementById('date').value;
+  const amount = parseFloat(document.getElementById('amount').value);
+  const category = document.getElementById('category').value;
+  const note = document.getElementById('note').value;
+
+  if (!date || isNaN(amount)) return alert("正しい日付と金額を入力してください");
+
+  db.collection('expenses').add({
+    householdId,
+    date,
+    amount,
+    category,
+    note,
+    createdBy: currentUser.uid,
+    createdAt: new Date()
+  }).then(() => {
+    document.getElementById('amount').value = '';
+    document.getElementById('note').value = '';
+    render();
+  });
+}
+
+function render() {
+  const month = document.getElementById('monthSelector').value;
+  const start = new Date(month + '-01');
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  db.collection('expenses')
+    .where('householdId', '==', householdId)
+    .where('date', '>=', month + '-01')
+    .where('date', '<', end.toISOString().slice(0,10))
+    .orderBy('date', 'desc')
+    .get()
+    .then(snapshot => {
+      const listDiv = document.getElementById('list');
+      const totalSpan = document.getElementById('total');
+      listDiv.innerHTML = '';
+      let total = 0;
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        total += d.amount;
+        const div = document.createElement('div');
+        div.className = 'entry';
+        div.innerHTML = `<strong>${d.category}</strong> ¥${d.amount} - ${d.date}<br><small>${d.note}</small>`;
+        listDiv.appendChild(div);
+      });
+      totalSpan.textContent = total.toFixed(0);
+    });
+}
+

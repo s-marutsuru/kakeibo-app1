@@ -1,0 +1,8 @@
+/kakeibo-app
+├── index.html
+├── app.js
+├── firebase-config.js
+├── manifest.json
+└── service-worker.js
+
+
